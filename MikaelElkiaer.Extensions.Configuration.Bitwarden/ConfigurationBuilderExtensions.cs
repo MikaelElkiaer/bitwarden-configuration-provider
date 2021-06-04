@@ -3,44 +3,33 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.Configuration;
 using MikaelElkiaer.Extensions.Configuration.Bitwarden;
+using MikaelElkiaer.Extensions.Configuration.Bitwarden.Model;
+using MikaelElkiaer.Extensions.Configuration.Bitwarden.Options;
 
 namespace Microsoft.Extensions.Configuration
 {
     public static class ConfigurationBuilderExtensions
     {
-        public static IConfigurationBuilder AddBitwardenConfiguration(this IConfigurationBuilder builder, string secretName)
+        public static IConfigurationBuilder AddBitwardenConfiguration(this IConfigurationBuilder builder, Action<BitwardenConfigurationProviderOptionsBuilder>? optionsBuilderDelegate = null)
         {
-            Secret secret;
-            var lastDot = secretName.LastIndexOf('.');
-            if (lastDot > -1 && secretName.Substring(lastDot) == ".env")
-                secret = new EnvFileSecret(secretName);
-            else
-                secret = new SingleValueSecret(secretName);
+#if !DEBUG
+            if (!options.EnabledOutsideDebug)
+                return builder;
+#endif
 
-            return AddBitwardenConfiguration(builder, secret);
-        }
+            var optionsBuilder = new BitwardenConfigurationProviderOptionsBuilder();
+            optionsBuilderDelegate?.Invoke(optionsBuilder);
 
-        public static IConfigurationBuilder AddBitwardenConfiguration(this IConfigurationBuilder builder, Secret secret)
-        {
-            return AddBitwardenConfiguration(builder, Enumerable.Repeat(secret, 1));
-        }
+            var options = optionsBuilder.Build();
 
-        public static IConfigurationBuilder AddBitwardenConfiguration(this IConfigurationBuilder builder, IEnumerable<Secret> secrets)
-        {
-            return AddBitwardenConfiguration(builder, b => b.AddSecrets(secrets.ToArray()));
-        }
+            IEnumerable<KeyValuePair<string, string>> existingKeyValues = Enumerable.Empty<KeyValuePair<string, string>>();
+            if (!options.DisabledSubstituteExisting)
+            {
+                var tempConfig = builder.Build();
+                existingKeyValues = tempConfig.AsEnumerable().Where(c => c.Value.StartsWith(options.SubstitutePrefix));
+            }
 
-        public static IConfigurationBuilder AddBitwardenConfiguration(this IConfigurationBuilder builder, Action<BitwardenConfigurationProviderOptionsBuilder> optionsBuilderDelegate)
-        {
-           var optionsBuilder = new BitwardenConfigurationProviderOptionsBuilder();
-           optionsBuilderDelegate.Invoke(optionsBuilder);
-
-           return AddBitwardenConfiguration(builder, optionsBuilder);
-        }
-
-        public static IConfigurationBuilder AddBitwardenConfiguration(this IConfigurationBuilder builder, BitwardenConfigurationProviderOptionsBuilder optionsBuilder)
-        {
-            return builder.Add(new BitwardenConfigurationSource(optionsBuilder.Build()));
+            return builder.Add(new BitwardenConfigurationSource(options, existingKeyValues));
         }
     }
 }

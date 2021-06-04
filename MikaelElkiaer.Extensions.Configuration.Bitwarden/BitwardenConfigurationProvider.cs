@@ -3,9 +3,13 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
 using CliWrap;
 using CliWrap.Buffered;
 using Microsoft.Extensions.Configuration;
+using MikaelElkiaer.Extensions.Configuration.Bitwarden.Model;
+using MikaelElkiaer.Extensions.Configuration.Bitwarden.Options;
 using Newtonsoft.Json.Linq;
 
 namespace MikaelElkiaer.Extensions.Configuration.Bitwarden
@@ -13,17 +17,19 @@ namespace MikaelElkiaer.Extensions.Configuration.Bitwarden
     public class BitwardenConfigurationProvider : ConfigurationProvider
     {
         private readonly BitwardenConfigurationProviderOptions options;
+        private readonly IEnumerable<KeyValuePair<string, string>> existingKeyValues;
 
-        public BitwardenConfigurationProvider(BitwardenConfigurationProviderOptions options)
+        public BitwardenConfigurationProvider(BitwardenConfigurationProviderOptions options, IEnumerable<KeyValuePair<string, string>> existingKeyValues)
         {
             this.options = options;
+            this.existingKeyValues = existingKeyValues;
         }
 
         public override void Load()
         {
             string homePath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             string sessionKeyPath = Path.Combine(homePath, ".bw-session-key.tmp");
-            string sessionKey = File.Exists(sessionKeyPath) ? File.ReadAllText(sessionKeyPath) : null;
+            string? sessionKey = File.Exists(sessionKeyPath) ? File.ReadAllText(sessionKeyPath) : null;
 
             string statusResult;
             try
@@ -64,26 +70,70 @@ namespace MikaelElkiaer.Extensions.Configuration.Bitwarden
             if (status != "unlocked")
                 throw new Exception("Something went wrong");
 
+            var existingSecrets = new List<Secret>();
+            if (!options.DisabledSubstituteExisting)
+            {
+                foreach (var v in existingKeyValues)
+                {
+                    var regex = $@"^{options.SubstitutePrefix}([^.]+)\.?(.*)?$";
+                    var match = Regex.Match(v.Value, regex);
+                    if (!match.Success)
+                        throw new Exception($"Failed to parse existing secret with value {v.Value}");
+
+                    var secretName = match.Groups[1].Value;
+                    var fieldName = match.Groups[2].Value;
+                    var secret = new ExistingSecret(secretName, v.Key, fieldName);
+                    existingSecrets.Add(secret);
+                }
+            }
+
             var keyValuePairs = new Dictionary<string, string>();
-            foreach (var s in options.Secrets)
+            foreach (var s in options.Secrets.Concat(existingSecrets))
             {
                 var secretResult = CallCli(homePath, sessionKey, "list", "items", "--search", s.Name);
                 var secretJson = JArray.Parse(secretResult);
                 if (secretJson.Count > 1)
                     throw new Exception($"Found multiple secrets with name {s.Name}");
 
-                var item = secretJson[0]["notes"].Value<string>();
+                var item = secretJson[0];
 
                 switch (s)
                 {
                     case EnvFileSecret envFileSecret:
-                        var parsedItem = DotEnvFile.ParseLines(item.Split('\n'), true);
+                        var parsedItem = DotEnvFile.ParseLines(item["notes"].Value<string>().Split('\n'), true);
                         foreach (var i in parsedItem)
                             keyValuePairs[i.Key] = i.Value;
                         break;
+                    case FieldsSecret fieldsSecret:
+                        if (fieldsSecret.IncludeNotes)
+                        {
+                            var notesKey = $"{s.Name}{fieldsSecret.NameToFieldSeperator}{fieldsSecret.NotesFieldName}";
+                            keyValuePairs[notesKey] = item["notes"].Value<string>();
+                        }
+                        foreach (var f in item["fields"])
+                        {
+                            var fieldName = f["name"].Value<string>();
+                            var fieldValue = f["value"].Value<string>();
+                            var fieldKey = $"{s.Name}{fieldsSecret.NameToFieldSeperator}{fieldName}";
+                            keyValuePairs[fieldKey] = fieldValue;
+                        }
+                        break;
+                    case ExistingSecret existingSecret:
+                        if (!existingSecret.HasFieldName || existingSecret.FieldName == "notes")
+                            keyValuePairs[existingSecret.OriginalKey] = item["notes"].Value<string>();
+                        else
+                        {
+                            var field = item["fields"].FirstOrDefault(f => f["name"].Value<string>() == existingSecret.FieldName);
+                            if (field == null)
+                                throw new Exception($"Could not find field {existingSecret.FieldName} on note {existingSecret.Name}");
+                            
+                            var fieldValue = field["value"].Value<string>();
+                            keyValuePairs[existingSecret.OriginalKey] = fieldValue;
+                        }
+                        break;
                     case SingleValueSecret singleValueSecret:
                     default:
-                        keyValuePairs[s.Name] = item;
+                        keyValuePairs[s.Name] = item["notes"].Value<string>();
                         break;
                 }
             }
@@ -91,21 +141,21 @@ namespace MikaelElkiaer.Extensions.Configuration.Bitwarden
             Data = keyValuePairs;
         }
 
-        private static string CallCli(string homePath, string sessionKey, string command, params string[] additionalArgs)
+        private static string CallCli(string homePath, string? sessionKey, string command, params string[] additionalArgs)
         {
             return Cli.Wrap("bw")
-                    .WithArguments(b =>
-                    {
-                        if (!string.IsNullOrWhiteSpace(sessionKey))
-                            b.Add(new[] { "--session", sessionKey });
-                        b.Add(command);
-                        foreach (var arg in additionalArgs)
-                            b.Add(additionalArgs);
-                    })
-                    .WithWorkingDirectory(homePath)
-                    .ExecuteBufferedAsync()
-                    .GetAwaiter().GetResult()
-                    .StandardOutput;
+                .WithArguments(b =>
+                {
+                    if (sessionKey != null)
+                        b.Add(new[] { "--session", sessionKey });
+                    b.Add(command);
+                    foreach (var arg in additionalArgs)
+                        b.Add(additionalArgs);
+                })
+                .WithWorkingDirectory(homePath)
+                .ExecuteBufferedAsync()
+                .GetAwaiter().GetResult()
+                .StandardOutput;
         }
 
         private string ReadHidden()

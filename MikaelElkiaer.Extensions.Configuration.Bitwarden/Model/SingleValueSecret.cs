@@ -1,4 +1,4 @@
-namespace MikaelElkiaer.Extensions.Configuration.Bitwarden
+namespace MikaelElkiaer.Extensions.Configuration.Bitwarden.Model
 {
     public class SingleValueSecret : Secret
     {
