@@ -7,9 +7,9 @@ namespace MikaelElkiaer.Extensions.Configuration.Bitwarden.Options
     public class BitwardenConfigurationProviderOptionsBuilder
     {
         private List<Secret> secrets = new List<Secret>();
-        private bool? disabledSubstiteExisting = true;
-        private string? substitutePrefix = "bw:";
-        private bool? enabledOutsideDebug = false;
+        private bool? disabledSubstiteExisting;
+        private string? substitutePrefix;
+        private bool? enabledOutsideDebug;
 
         public BitwardenConfigurationProviderOptionsBuilder AddSecret(Secret secret)
         {
