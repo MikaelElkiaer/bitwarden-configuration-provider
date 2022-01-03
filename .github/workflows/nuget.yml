@@ -12,7 +12,10 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
       with:
+        source-url: https://api.nuget.org/v3/index.json
         dotnet-version: 3.1.412
+      env:
+        NUGET_AUTH_TOKEN: ${{secrets.NUGET_TOKEN}}
     - name: Restore dependencies
       run: dotnet restore
     - name: Publish
