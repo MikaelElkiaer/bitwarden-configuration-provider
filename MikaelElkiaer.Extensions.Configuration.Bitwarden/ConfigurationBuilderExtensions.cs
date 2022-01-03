@@ -12,13 +12,13 @@ namespace Microsoft.Extensions.Configuration
     {
         public static IConfigurationBuilder AddBitwardenConfiguration(this IConfigurationBuilder builder, Action<BitwardenConfigurationProviderOptionsBuilder>? optionsBuilderDelegate = null)
         {
-#if !DEBUG
-            if (!options.EnabledOutsideDebug)
-                return builder;
-#endif
-
             var optionsBuilder = new BitwardenConfigurationProviderOptionsBuilder();
             optionsBuilderDelegate?.Invoke(optionsBuilder);
+
+#if !DEBUG
+            if (!optionsBuilder.EnabledOutsideDebug)
+                return builder;
+#endif
 
             var options = optionsBuilder.Build();
 
