@@ -92,7 +92,9 @@ namespace MikaelElkiaer.Extensions.Configuration.Bitwarden
             {
                 var secretResult = CallCli(homePath, sessionKey, "list", "items", "--search", s.Name);
                 var secretJson = JArray.Parse(secretResult);
-                if (secretJson.Count > 1)
+                if (!secretJson.Any())
+                    throw new Exception($"Did not find secret with name {s.Name}");
+                else if (secretJson.Count > 1)
                     throw new Exception($"Found multiple secrets with name {s.Name}");
 
                 var item = secretJson[0];
