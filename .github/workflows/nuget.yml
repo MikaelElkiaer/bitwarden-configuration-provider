@@ -18,6 +18,6 @@ jobs:
     - name: Publish
       run: |
         mkdir __out
-        dotnet pack -c Release -o __out --no-restore MikaelElkiaer.Extensions.Configuration.BitWarden
+        dotnet pack -c Release -o __out --no-restore MikaelElkiaer.Extensions.Configuration.Bitwarden
         dotnet nuget push "./__out/*.nupkg" --skip-duplicate --no-symbols true --api-key ${{secrets.NUGET_TOKEN}}
         rm -rf __out
