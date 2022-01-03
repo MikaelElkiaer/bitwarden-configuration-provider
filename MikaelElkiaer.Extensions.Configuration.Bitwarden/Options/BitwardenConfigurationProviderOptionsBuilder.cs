@@ -46,6 +46,11 @@ namespace MikaelElkiaer.Extensions.Configuration.Bitwarden.Options
             return this;
         }
 
+        public bool? IsEnabledOutsideDebug()
+        {
+            return enabledOutsideDebug;
+        }
+
         public BitwardenConfigurationProviderOptions Build()
         {
             return new BitwardenConfigurationProviderOptions(secrets, disabledSubstiteExisting, substitutePrefix);

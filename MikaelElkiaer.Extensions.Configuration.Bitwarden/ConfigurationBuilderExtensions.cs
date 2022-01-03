@@ -16,7 +16,7 @@ namespace Microsoft.Extensions.Configuration
             optionsBuilderDelegate?.Invoke(optionsBuilder);
 
 #if !DEBUG
-            if (!optionsBuilder.EnabledOutsideDebug)
+            if (!(optionsBuilder.IsEnabledOutsideDebug() ?? false))
                 return builder;
 #endif
 
