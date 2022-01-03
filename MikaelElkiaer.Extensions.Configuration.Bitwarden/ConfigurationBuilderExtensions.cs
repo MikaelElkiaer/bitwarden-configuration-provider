@@ -26,7 +26,7 @@ namespace Microsoft.Extensions.Configuration
             if (!options.DisabledSubstituteExisting)
             {
                 var tempConfig = builder.Build();
-                existingKeyValues = tempConfig.AsEnumerable().Where(c => c.Value.StartsWith(options.SubstitutePrefix));
+                existingKeyValues = tempConfig.AsEnumerable().Where(c => c.Value != null && c.Value.StartsWith(options.SubstitutePrefix));
             }
 
             return builder.Add(new BitwardenConfigurationSource(options, existingKeyValues));
