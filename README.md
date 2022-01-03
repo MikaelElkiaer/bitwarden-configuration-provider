@@ -51,11 +51,12 @@ By default, the configuration provider will replace key-values which refer to a 
 If the configuration provider is enabled without any configuration, it will only alter already defined configuration keys, set by other configuration providers such as JsonFile or EnvironmentVariables.
 It will update any keys, which has a certain value - in the following format:
 ```
-{PREFIX}{NAME}[__{FIELDNAME}]
+{PREFIX}{NAME}[.{FIELDNAME}]
 ```
 
 The prefix is by default `bw:`, the name refers to the name of a Bitwarden secret, and the field name is optionally set to get the value of a specific field.
 If there is no field name, or it is set to `notes`, it will refer to the notes property of the secret.
+Note the use of `.` as a field selector which prohibits the use of `.` in secret names.
 
 ## More complex configurations
 The configuration provider supports the following types of secrets:
