@@ -46,6 +46,13 @@ However, besides credentials types (Login/Card/Identity), Bitwarden also has a t
 A secure note consists of a name, some fields, and a 'notes' property.
 If fields are omitted, a secure note is basically a key-value-pair.
 
+## Installation
+The nuget package can be installed via `dotnet add package MikaelElkiaer.Extensions.Configuration.Bitwarden`.
+Then it can be added via an extension method on `IConfigurationBuilder`:
+```
+c.AddBitwardenConfiguration();
+```
+
 ## Default usage
 By default, the configuration provider will replace key-values which refer to a secret found in Bitwarden.
 If the configuration provider is enabled without any configuration, it will only alter already defined configuration keys, set by other configuration providers such as JsonFile or EnvironmentVariables.
