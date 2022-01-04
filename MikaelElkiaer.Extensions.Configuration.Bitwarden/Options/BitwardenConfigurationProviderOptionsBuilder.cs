@@ -9,7 +9,6 @@ namespace MikaelElkiaer.Extensions.Configuration.Bitwarden.Options
         private List<Secret> secrets = new List<Secret>();
         private bool? disabledSubstiteExisting;
         private string? substitutePrefix;
-        private bool? enabledOutsideDebug;
 
         public BitwardenConfigurationProviderOptionsBuilder AddSecret(Secret secret)
         {
@@ -37,18 +36,6 @@ namespace MikaelElkiaer.Extensions.Configuration.Bitwarden.Options
             substitutePrefix = prefix;
 
             return this;
-        }
-
-        public BitwardenConfigurationProviderOptionsBuilder EnableOutsideDebug()
-        {
-            enabledOutsideDebug = true;
-
-            return this;
-        }
-
-        public bool? IsEnabledOutsideDebug()
-        {
-            return enabledOutsideDebug;
         }
 
         public BitwardenConfigurationProviderOptions Build()

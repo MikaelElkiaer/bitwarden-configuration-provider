@@ -12,7 +12,7 @@ namespace MikaelElkiaer.Extensions.Configuration.Example
             var configuration = new ConfigurationBuilder()
                 .AddJsonFile("appsettings.json")
                 .AddEnvironmentVariables()
-                //.AddBitwardenConfiguration() // This will enable substition of existing keys, development only
+                //.AddBitwardenConfiguration() // This will enable substition of existing keys
                 .AddBitwardenConfiguration(b => // Advanced configuration with complex secret types, as well as non-default options
                 {
                     b.AddSecret(new Bitwarden.Model.SingleValueSecret("OVERRIDE_SINGLE_VALUE"));
@@ -20,7 +20,6 @@ namespace MikaelElkiaer.Extensions.Configuration.Example
                     b.AddSecret(new Bitwarden.Model.FieldsSecret("OVERRIDE_FIELDS", includeNotes: true, nameToFieldSeperator: "__"));
                     //b.DisableSubstituteExisting();
                     //b.SetSubstitutePrefix("bw:");
-                    //b.EnableOutsideDebug();
                 })
                 .Build();
 

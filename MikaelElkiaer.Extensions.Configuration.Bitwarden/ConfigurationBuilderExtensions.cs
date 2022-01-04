@@ -15,11 +15,6 @@ namespace Microsoft.Extensions.Configuration
             var optionsBuilder = new BitwardenConfigurationProviderOptionsBuilder();
             optionsBuilderDelegate?.Invoke(optionsBuilder);
 
-#if !DEBUG
-            if (!(optionsBuilder.IsEnabledOutsideDebug() ?? false))
-                return builder;
-#endif
-
             var options = optionsBuilder.Build();
 
             IEnumerable<KeyValuePair<string, string>> existingKeyValues = Enumerable.Empty<KeyValuePair<string, string>>();
